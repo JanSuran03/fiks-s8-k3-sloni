@@ -9,11 +9,20 @@
                    (str/split input-line #"\ ")
                    (map read-string input-line)))))
 
-(defn pprint-array [[width height x y quad-triangle]]
+(defn print-array [[width height x y quad-triangle]]
+  #_(let [s (set quad-triangle)]
+      (newline)
+      (doseq [row (reverse (range width))]
+        (doseq [col (range height)]
+          (printf "%3s" (cond (and (= x row)
+                                   (= y col)) "X"
+                              (contains? s [row col]) "O"
+                              :else \u00b7)))
+        (newline)))
   (let [s (set quad-triangle)]
     (newline)
-    (doseq [row (reverse (range width))]
-      (doseq [col (range height)]
+    (doseq [row (range height)]
+      (doseq [col (range width)]
         (printf "%3s" (cond (and (= x row)
                                  (= y col)) "X"
                             (contains? s [row col]) "O"
@@ -21,10 +30,33 @@
       (newline))))
 
 (defmulti compute-intersection
-          (fn [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+          ^{:doc "Takes data of a rectangle and a normalized triangle so
+                  that all the coordinates are always positive:
+                  [[x1 y1] [_x2 _y2] [_x3 _y3]]
+                  x1 < x2 > x2
+                  y1 = y2 < y3"}
+          (fn [[width height _center-x _center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+            (println (dec width) (dec height) _center-x _center-y [[x1 y1] [x2 y2] [x3 y3]])
+            (let [x-out-of-field (> x2 (dec height))
+                  y-out-of-field (> y3 (dec width))
+                  ret [x-out-of-field y-out-of-field]]
+              (println ret)
+              ret)))
 
-            (let [x-out-of-field (< x1 0)
-                  y-out-of-field (< y1)])))
+(defmethod compute-intersection [false false]
+  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (let [leg-1 (inc (- x2 x1))
+        leg-2 (inc (- x3 x1))]
+    (* leg-1 leg-2)))
+
+(defmethod compute-intersection [false true]
+  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+
+(defmethod compute-intersection [true false]
+  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+
+(defmethod compute-intersection [true true]
+  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
 
 (defn rhombus-quarters-and-diagonals [x y moves]
   (let [x-left (- x moves)
@@ -41,13 +73,13 @@
      [horizontal-line vertical-line]]))
 
 (defn flip-along-x-axis [width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]
-  (let [[new-center-y new-y1 new-y2 new-y3] (map (fn [x]
-                                                   (- (dec height) x)) [center-y y1 y2 y3])]
+  (let [[new-center-y new-y1 new-y2 new-y3] (map (fn [y]
+                                                   (- (dec width) y)) [center-y y1 y2 y3])]
     [width height center-x new-center-y [[x1 new-y1] [x2 new-y2] [x3 new-y3]]]))
 
 (defn flip-along-y-axis [width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]
   (let [[new-center-x new-x1 new-x2 new-x3] (map (fn [x]
-                                                   (- (dec width) x)) [center-x x1 x2 x3])]
+                                                   (- (dec height) x)) [center-x x1 x2 x3])]
     [width height new-center-x center-y [[new-x1 y1] [new-x2 y2] [new-x3 y3]]]))
 
 
@@ -60,13 +92,18 @@
         normalized-quad-3-along-x-y (->> [width height x y quad-3-triangle]
                                          (apply flip-along-x-axis)
                                          (apply flip-along-y-axis))
-        normalized-quad-4-along-y (flip-along-x-axis width height x y quad-4-triangle)]
-    #_(doseq [arr [normalized-quad-1 normalized-quad-4-along-y
-                   normalized-quad-2-along-x normalized-quad-3-along-x-y]
-              (pprint-array arr)])
-    (doseq [x [normalized-quad-1 normalized-quad-2-along-x
-               normalized-quad-3-along-x-y normalized-quad-4-along-y]]
-      (println x))))
+        normalized-quad-4-along-y (flip-along-x-axis width height x y quad-4-triangle)
+        normalized-quadrants-triangles [normalized-quad-1 normalized-quad-4-along-y
+                                        normalized-quad-2-along-x normalized-quad-3-along-x-y]]
+    (doseq [arr #_normalized-quadrants-triangles
+            (map #(vector width height x y %) [quad-1-triangle quad-2-triangle
+                                               quad-3-triangle quad-4-triangle])]
+      (print-array arr))
+    (doseq [x [quad-1-triangle quad-2-triangle
+               quad-3-triangle quad-4-triangle]]
+      (prn x))
+    (doseq [x normalized-quadrants-triangles]
+      (print-array x))))
 
 (defn -main [& _args]
   (let [processed-input (read-and-process-input)]

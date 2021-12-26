@@ -21,7 +21,10 @@
       (newline))))
 
 (defmulti compute-intersection
-          (fn [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]))
+          (fn [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+
+            (let [x-out-of-field (< x1 0)
+                  y-out-of-field (< y1)])))
 
 (defn rhombus-quarters-and-diagonals [x y moves]
   (let [x-left (- x moves)
@@ -39,12 +42,12 @@
 
 (defn flip-along-x-axis [width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]
   (let [[new-center-y new-y1 new-y2 new-y3] (map (fn [x]
-                                                   (- height 1 x)) [center-y y1 y2 y3])]
+                                                   (- (dec height) x)) [center-y y1 y2 y3])]
     [width height center-x new-center-y [[x1 new-y1] [x2 new-y2] [x3 new-y3]]]))
 
 (defn flip-along-y-axis [width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]
   (let [[new-center-x new-x1 new-x2 new-x3] (map (fn [x]
-                                                   (- width 1 x)) [center-x x1 x2 x3])]
+                                                   (- (dec width) x)) [center-x x1 x2 x3])]
     [width height new-center-x center-y [[new-x1 y1] [new-x2 y2] [new-x3 y3]]]))
 
 
@@ -58,11 +61,11 @@
                                          (apply flip-along-x-axis)
                                          (apply flip-along-y-axis))
         normalized-quad-4-along-y (flip-along-x-axis width height x y quad-4-triangle)]
-    (pprint-array normalized-quad-1)
-    (pprint-array normalized-quad-4-along-y)
-    (pprint-array normalized-quad-2-along-x)
-    (pprint-array normalized-quad-3-along-x-y)
-    (doseq [x [normalized-quad-1 normalized-quad-2-along-x normalized-quad-3-along-x-y normalized-quad-4-along-y]]
+    #_(doseq [arr [normalized-quad-1 normalized-quad-4-along-y
+                   normalized-quad-2-along-x normalized-quad-3-along-x-y]
+              (pprint-array arr)])
+    (doseq [x [normalized-quad-1 normalized-quad-2-along-x
+               normalized-quad-3-along-x-y normalized-quad-4-along-y]]
       (println x))))
 
 (defn -main [& _args]

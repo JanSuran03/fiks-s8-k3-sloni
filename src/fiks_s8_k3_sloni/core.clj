@@ -32,7 +32,8 @@
 
            x2 > rest
            y3 > rest"
-          (fn [[height width center-x center-y [[x1 y1] [max-x y2] [x3 max-y]]]]
+          (fn [[height width center-x center-y [[x1 y1] [max-x y2] [x3 max-y]] :as in]]
+            (print-array in)
             (let [max-row (dec height)
                   max-col (dec width)
                   x-out-of-field (> max-x max-row)
@@ -136,26 +137,24 @@
         [new-center-y new-y1 new-y2 new-y3] (map #(- height % 1) [center-x x1 x2 x3])]
     [width height new-center-x new-center-y [[new-x1 new-y1] [new-x2 new-y2] [new-x3 new-y3]]]))
 
+(defn solve-line [[start end] range]
+  (let [start (if (neg? start) 0 start)
+        end (if (> end (dec range)) (dec range) end)]
+    (inc (- end start))))
+
 (defn solve [[height width x y moves]]
   (println height width x y moves)
   (let [[[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
-         [horizontal-line vertical-line]] (rhombus-quarters-and-diagonals x y moves)
+         [x-line y-line]] (rhombus-quarters-and-diagonals x y moves)
         normalized-quad-1 [height width x y quad-1-triangle]
         normalized-quad-2-along-x (rotate+270 [height width x y quad-2-triangle])
         normalized-quad-3-along-x-y (rotate+180 [height width x y quad-3-triangle])
         normalized-quad-4-along-y (rotate+90 [height width x y quad-4-triangle])
         normalized-quadrants-triangles [normalized-quad-1 normalized-quad-2-along-x
-                                        normalized-quad-3-along-x-y normalized-quad-4-along-y]]
-    #_(doseq [arr #_normalized-quadrants-triangles
-              (map #(vector width height x y %) [quad-1-triangle quad-2-triangle
-                                                 quad-3-triangle quad-4-triangle])]
-        (print-array arr))
-    #_(doseq [x [quad-1-triangle quad-2-triangle
-                 quad-3-triangle quad-4-triangle]]
-        (prn x))
-    #_(doseq [x normalized-quadrants-triangles]
-        (print-array x))
-    (map compute-intersection normalized-quadrants-triangles)))
+                                        normalized-quad-3-along-x-y normalized-quad-4-along-y]
+        x-diag-intersection (solve-line x-line height)
+        y-diag-intersection (solve-line y-line width)]
+    (dec (apply + x-diag-intersection y-diag-intersection (map compute-intersection normalized-quadrants-triangles)))))
 
 (defn -main [& args]
   (let [processed-input (read-and-process-input)]

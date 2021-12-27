@@ -116,11 +116,9 @@
   (let [[[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
          [horizontal-line vertical-line]] (rhombus-quarters-and-diagonals x y moves)
         normalized-quad-1 [height width x y quad-1-triangle]
-        normalized-quad-2-along-x (flip-along-y-axis height width x y quad-2-triangle)
-        normalized-quad-3-along-x-y (->> [height width x y quad-3-triangle]
-                                         (apply flip-along-x-axis)
-                                         (apply flip-along-y-axis))
-        normalized-quad-4-along-y (flip-along-x-axis height width x y quad-4-triangle)
+        normalized-quad-2-along-x (rotate+270 [height width x y quad-2-triangle])
+        normalized-quad-3-along-x-y (rotate+180 [height width x y quad-3-triangle])
+        normalized-quad-4-along-y (rotate+90 [height width x y quad-4-triangle])
         normalized-quadrants-triangles [normalized-quad-1 normalized-quad-2-along-x
                                         normalized-quad-3-along-x-y normalized-quad-4-along-y]]
     #_(doseq [arr #_normalized-quadrants-triangles
@@ -130,16 +128,9 @@
     #_(doseq [x [quad-1-triangle quad-2-triangle
                  quad-3-triangle quad-4-triangle]]
         (prn x))
-    #_(doseq [x normalized-quadrants-triangles]
-        (print-array x))
-    #_(map compute-intersection normalized-quadrants-triangles)
-    ;(println normalized-quad-1)
-    ;(print-array normalized-quad-1)
-    ;(-> normalized-quad-1 rotate+90 print-array)
-    ;(-> normalized-quad-1 rotate+180 print-array)
-    (-> normalized-quad-1 print-array)
-    (-> normalized-quad-1 rotate+90 rotate+90 rotate+90 print-array)
-    (-> normalized-quad-1 rotate+270 print-array)))
+    (doseq [x normalized-quadrants-triangles]
+      (print-array x))
+    #_(map compute-intersection normalized-quadrants-triangles)))
 
 (defn -main [& _args]
   (let [processed-input (read-and-process-input)]

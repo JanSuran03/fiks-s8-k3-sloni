@@ -32,7 +32,7 @@
 
            x2 > rest
            y3 > rest"
-          (fn [[height width _center-x _center-y [[x1 y1] [max-x y2] [x3 max-y]] :as in]]
+          (fn [[height width _center-x _center-y [[x1 y1] [max-x y2] [x3 max-y]]]]
             (let [max-row (dec height)
                   max-col (dec width)
                   x-out-of-field (> max-x max-row)
@@ -42,15 +42,18 @@
               ;(println (str "max-x: " max-row " (x2 = " max-x "), max-y: " max-col " (y3 = " max-y ")"))
               ;(println (str "center-x: " _center-x ", center-y: " _center-y ", vertices: " [[x1 y1] [max-x y2] [x3 max-y]]))
               ;(newline)
-              (print-array in)
               ;(println (str max-x " >? " max-row ", " max-y " >? " max-col))
               ;(println ret)
               ret)))
 
+(comment
+  (let [data [12 10 5 6 [[6 7] [11 7] [6 12]]]]
+    (print-array data)))
+
 (defmethod compute-intersection [false false]               ; the entire triangle is inside the rectangle
-  [[width height center-x center-y [[x1 _y1] [x2 _y2] [_x3 _y3]] :as in]]
-  ;    x · · · ·    obviously the flat here is (apply + (range 1 (+ 1 5)))
-  ;    · · · · ·    (apply + (range 1 (+ 1 n)))
+  [[height width center-x center-y [[x1 _y1] [x2 _y2] [_x3 _y3]]]]
+  ;    x · · · ·    obviously the flat of the triangle here is (apply + (range 1 (+ 1 5)))
+  ;    · · · · ·    => (apply + (range 1 (+ 1 n)))
   ;    · · · · ·    { Σ(1 -> k): k = n } == (n^2 + n)/2
   ;    · · · · ·    in Clojure: (/ (* n (inc n))
   ;    x · · · x                 2)
@@ -58,14 +61,15 @@
     (/ (* leg-x-y (inc leg-x-y))
        2)))
 
-(defmethod compute-intersection [false true]
-  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+(defmethod compute-intersection [false true]                ; X-greatest vertex INside, Y-greatest OUTside
+  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (println width y3))
 
-(defmethod compute-intersection [true false]
-  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+(defmethod compute-intersection [true false]                ; X-greatest vertex OUTside, Y-greatest OUTside
+  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
 
-(defmethod compute-intersection [true true]                 ; both of the hypotenuse's vertices end outside the rectangle
-  [[width height center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+(defmethod compute-intersection [true true]                 ; X-greatest vertex OUTside, Y-greatest OUTside
+  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
 
 #_(defn compute-intersection [[width height _center-x _center-y [[x1 y1] [x2 y2] [x3 y3]]]]
     (let [x-out-of-field (>= x2 (dec width))
@@ -88,16 +92,6 @@
         quad-4-triangle [[(inc x) (dec y)] [(inc x) (inc y-bottom)] [(dec x-right) (dec y)]]]
     [[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
      [horizontal-line vertical-line]]))
-
-(defn flip-along-x-axis [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]
-  (let [[new-center-y new-y1 new-y2 new-y3] (map (fn [y]
-                                                   (- (dec width) y)) [center-y y1 y2 y3])]
-    [height width center-x new-center-y [[x1 new-y1] [x2 new-y2] [x3 new-y3]]]))
-
-(defn flip-along-y-axis [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]
-  (let [[new-center-x new-x1 new-x2 new-x3] (map (fn [x]
-                                                   (- (dec height) x)) [center-x x1 x2 x3])]
-    [height width new-center-x center-y [[new-x1 y1] [new-x2 y2] [new-x3 y3]]]))
 
 (defn rotate+90 [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   (let [[new-center-x new-x1 new-x2 new-x3] (map #(- width % 1) [center-y y1 y2 y3])

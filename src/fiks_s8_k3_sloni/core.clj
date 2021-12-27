@@ -71,14 +71,6 @@
 (defmethod compute-intersection [true true]                 ; X-greatest vertex OUTside, Y-greatest OUTside
   [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
 
-#_(defn compute-intersection [[width height _center-x _center-y [[x1 y1] [x2 y2] [x3 y3]]]]
-    (let [x-out-of-field (>= x2 (dec width))
-          y-out-of-field (>= y3 (dec height))
-          ret [x-out-of-field y-out-of-field]]
-      (println (str x2 " >? " (dec width) ", " y3 " >? " (dec height)))
-      (println ret)
-      (newline)
-      (dorun (map #(if % 1 false) ret))))
 (defn rhombus-quarters-and-diagonals [x y moves]
   (let [x-left (- x moves)
         x-right (+ x moves)

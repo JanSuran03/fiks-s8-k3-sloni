@@ -32,44 +32,80 @@
 
            x2 > rest
            y3 > rest"
-          (fn [[height width _center-x _center-y [[x1 y1] [max-x y2] [x3 max-y]]]]
+          (fn [[height width center-x center-y [[x1 y1] [max-x y2] [x3 max-y]]]]
             (let [max-row (dec height)
                   max-col (dec width)
                   x-out-of-field (> max-x max-row)
                   y-out-of-field (> max-y max-col)
                   ret [x-out-of-field y-out-of-field]]
-              ;(println [x1 y1] [max-x y2] [x3 max-y])
-              ;(println (str "max-x: " max-row " (x2 = " max-x "), max-y: " max-col " (y3 = " max-y ")"))
-              ;(println (str "center-x: " _center-x ", center-y: " _center-y ", vertices: " [[x1 y1] [max-x y2] [x3 max-y]]))
-              ;(newline)
-              ;(println (str max-x " >? " max-row ", " max-y " >? " max-col))
               ;(println ret)
               ret)))
 
-(comment
-  (let [data [12 10 5 6 [[6 7] [11 7] [6 12]]]]
-    (print-array data)))
+(defn test-arr [arr]
+  (print-array arr)
+  (println (compute-intersection arr)))
+
+(defn dotted-triangle-flat [overhang]
+  (/ (* overhang (inc overhang))
+     2))
 
 (defmethod compute-intersection [false false]               ; the entire triangle is inside the rectangle
-  [[height width center-x center-y [[x1 _y1] [x2 _y2] [_x3 _y3]]]]
+  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   ;    x · · · ·    obviously the flat of the triangle here is (apply + (range 1 (+ 1 5)))
   ;    · · · · ·    => (apply + (range 1 (+ 1 n)))
   ;    · · · · ·    { Σ(1 -> k): k = n } == (n^2 + n)/2
   ;    · · · · ·    in Clojure: (/ (* n (inc n))
   ;    x · · · x                 2)
-  (let [leg-x-y (inc (- x2 x1))]
-    (/ (* leg-x-y (inc leg-x-y))
-       2)))
+  (let [overhang (inc (- x2 x1))]
+    (dotted-triangle-flat overhang)))
 
 (defmethod compute-intersection [false true]                ; X-greatest vertex INside, Y-greatest OUTside
   [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
-  (println width y3))
+  (let [inside-overhang (inc (- x2 x1))
+        outside-overhang (- y3 (dec width))]
+    (- (dotted-triangle-flat inside-overhang)
+       (dotted-triangle-flat outside-overhang))))
 
 (defmethod compute-intersection [true false]                ; X-greatest vertex OUTside, Y-greatest OUTside
-  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (let [inside-overhang (inc (- x2 x1))
+        outside-overhang (- x2 (dec height))]
+    (- (dotted-triangle-flat inside-overhang)
+       (dotted-triangle-flat outside-overhang))))
+
+(defn test-all []
+  (let [data1 [12 10 5 6 [[6 7] [11 7] [6 12]]]
+        data2 [10 12 6 5 [[7 6] [12 6] [7 11]]]
+        data3 [16 14 5 6 [[6 7] [18 7] [6 19]]]
+        data4 [14 12 5 6 [[6 7] [15 7] [6 16]]]]
+    ;(test-arr data2)
+    ;(test-arr data1)
+    ;(test-arr data3)
+    ;(test-arr data4)
+    ;(test-arr [10 8 0 0 [[5 2] [12 2] [5 9]]])
+    ;(test-arr [10 8 0 0 [[5 2] [15 2] [5 12]]])
+    (test-arr [8 8 2 2 [[4 3] [7 3] [4 6]]])
+    (test-arr [8 8 2 2 [[4 3] [8 3] [4 7]]])
+    (test-arr [8 8 2 2 [[4 3] [9 3] [4 8]]])
+    (test-arr [8 8 2 2 [[4 3] [10 3] [4 9]]])
+    (test-arr [8 8 2 2 [[4 3] [11 3] [4 10]]])
+    (test-arr [8 8 2 2 [[4 3] [12 3] [4 11]]])
+    (test-arr [8 8 2 2 [[4 3] [13 3] [4 12]]])
+    (test-arr [8 8 2 2 [[4 3] [14 3] [4 13]]])
+    (test-arr [8 8 2 2 [[4 3] [15 3] [4 14]]])))
 
 (defmethod compute-intersection [true true]                 ; X-greatest vertex OUTside, Y-greatest OUTside
-  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]])
+  [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (let [inside-overhang (inc (- x2 x1))
+        outside-x-overhang (- x2 (dec height))
+        outside-y-overhang (- y3 (dec width))]
+    (if (> (+ outside-x-overhang outside-y-overhang)
+           inside-overhang)
+      (* (- height x1)
+         (- width y1))
+      (- (dotted-triangle-flat inside-overhang)
+         (dotted-triangle-flat outside-x-overhang)
+         (dotted-triangle-flat outside-y-overhang)))))
 
 (defn rhombus-quarters-and-diagonals [x y moves]
   (let [x-left (- x moves)
@@ -121,6 +157,6 @@
         (print-array x))
     (map compute-intersection normalized-quadrants-triangles)))
 
-(defn -main [& _args]
+(defn -main [& args]
   (let [processed-input (read-and-process-input)]
     (solve (first processed-input))))

@@ -32,16 +32,19 @@
 
            x2 > rest
            y3 > rest"
-          (fn [[height width _center-x _center-y [[x1 y1] [x2 y2] [x3 y3]] :as in]]
-            ;(println (str "max-x: " (dec width) " (x2 = " x2 "), max-y: " (dec height) " (y3 = " y3 ")"))
-            ;(println (str "center-x: " _center-x ", center-y: " _center-y ", vertices: " [[x1 y1] [x2 y2] [x3 y3]]))
-            (print-array in)
-            (println [x1 y1] [x2 y2] [x3 y3])
-            (let [x-out-of-field (>= x2 (dec width))
-                  y-out-of-field (>= y3 (dec height))
+          (fn [[height width _center-x _center-y [[x1 y1] [max-x y2] [x3 max-y]] :as in]]
+            (let [max-row (dec height)
+                  max-col (dec width)
+                  x-out-of-field (> max-x max-row)
+                  y-out-of-field (> max-y max-col)
                   ret [x-out-of-field y-out-of-field]]
-              (println (str x2 " >? " (dec width) ", " y3 " >? " (dec height)))
-              (println ret)
+              ;(println [x1 y1] [max-x y2] [x3 max-y])
+              ;(println (str "max-x: " max-row " (x2 = " max-x "), max-y: " max-col " (y3 = " max-y ")"))
+              ;(println (str "center-x: " _center-x ", center-y: " _center-y ", vertices: " [[x1 y1] [max-x y2] [x3 max-y]]))
+              ;(newline)
+              (print-array in)
+              ;(println (str max-x " >? " max-row ", " max-y " >? " max-col))
+              ;(println ret)
               ret)))
 
 (defmethod compute-intersection [false false]               ; the entire triangle is inside the rectangle
@@ -128,9 +131,9 @@
     #_(doseq [x [quad-1-triangle quad-2-triangle
                  quad-3-triangle quad-4-triangle]]
         (prn x))
-    (doseq [x normalized-quadrants-triangles]
-      (print-array x))
-    #_(map compute-intersection normalized-quadrants-triangles)))
+    #_(doseq [x normalized-quadrants-triangles]
+        (print-array x))
+    (map compute-intersection normalized-quadrants-triangles)))
 
 (defn -main [& _args]
   (let [processed-input (read-and-process-input)]

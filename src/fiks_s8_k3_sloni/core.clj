@@ -96,11 +96,19 @@
                                                    (- (dec height) x)) [center-x x1 x2 x3])]
     [height width new-center-x center-y [[new-x1 y1] [new-x2 y2] [new-x3 y3]]]))
 
-(defn rotate [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
-  (let [[new-center-x new-x1 new-x2 new-x3] (map (fn [y]
-                                                   (- width y 1))
-                                                 [center-y y1 y2 y3])
+(defn rotate+90 [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (let [[new-center-x new-x1 new-x2 new-x3] (map #(- width % 1) [center-y y1 y2 y3])
         [new-center-y new-y1 new-y2 new-y3] [center-x x1 x2 x3]]
+    [width height new-center-x new-center-y [[new-x1 new-y1] [new-x2 new-y2] [new-x3 new-y3]]]))
+
+(defn rotate+180 [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (let [[new-center-x new-x1 new-x2 new-x3] (map #(- height % 1) [center-x x1 x2 x3])
+        [new-center-y new-y1 new-y2 new-y3] (map #(- width % 1) [center-y y1 y2 y3])]
+    [height width new-center-x new-center-y [[new-x1 new-y1] [new-x2 new-y2] [new-x3 new-y3]]]))
+
+(defn rotate+270 [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
+  (let [[new-center-x new-x1 new-x2 new-x3] [center-y y1 y2 y3]
+        [new-center-y new-y1 new-y2 new-y3] (map #(- height % 1) [center-x x1 x2 x3])]
     [width height new-center-x new-center-y [[new-x1 new-y1] [new-x2 new-y2] [new-x3 new-y3]]]))
 
 (defn solve [[height width x y moves]]
@@ -125,11 +133,13 @@
     #_(doseq [x normalized-quadrants-triangles]
         (print-array x))
     #_(map compute-intersection normalized-quadrants-triangles)
-    (println normalized-quad-1)
-    (print-array normalized-quad-1)
-    (-> normalized-quad-1 rotate print-array)
-    (-> normalized-quad-1 rotate rotate print-array)
-    (-> normalized-quad-1 rotate rotate rotate print-array)))
+    ;(println normalized-quad-1)
+    ;(print-array normalized-quad-1)
+    ;(-> normalized-quad-1 rotate+90 print-array)
+    ;(-> normalized-quad-1 rotate+180 print-array)
+    (-> normalized-quad-1 print-array)
+    (-> normalized-quad-1 rotate+90 rotate+90 rotate+90 print-array)
+    (-> normalized-quad-1 rotate+270 print-array)))
 
 (defn -main [& _args]
   (let [processed-input (read-and-process-input)]

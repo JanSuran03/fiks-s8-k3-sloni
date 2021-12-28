@@ -1,8 +1,6 @@
 (ns fiks-s8-k3-sloni.core
   (:require [clojure.string :as str]))
 
-(def dot-in-the-middle \u00b7)
-
 (def evenness-complement {:even :odd
                           :odd  :even})
 
@@ -12,23 +10,12 @@
     (evenness-complement evenness)))
 
 (defn read-and-process-input []
-  (->> "input.txt" slurp
+  (->> "input-2.txt" slurp
        str/split-lines
        rest
        (map #(as-> % input-line
                    (str/split input-line #"\ ")
                    (map read-string input-line)))))
-
-(defn print-array [[height width x y quad-triangle]]
-  (let [s (set quad-triangle)]
-    (newline)
-    (doseq [row (range height)]
-      (doseq [col (range width)]
-        (printf "%3s" (cond (and (= x row)
-                                 (= y col)) "X"
-                            (contains? s [row col]) "O"
-                            :else dot-in-the-middle)))
-      (newline))))
 
 (defn odd-and-even
   "Based on the evenness in the starting corner and the number of squares on one
@@ -61,14 +48,6 @@
                   y-out-of-field (> max-y max-col)
                   ret [x-out-of-field y-out-of-field]]
               ret)))
-
-(defn test-arr [arr]
-  (print-array arr)
-  (println (compute-intersection arr)))
-
-(defn dotted-triangle-flat [overhang]
-  (/ (* overhang (inc overhang))
-     2))
 
 (defn merge-with-minus [& maps]
   (apply merge-with - maps))
@@ -170,7 +149,6 @@
         normalized-quad-4-along-y (rotate+90 [height width x y quad-4-triangle])
         normalized-quadrants-triangles [normalized-quad-1 normalized-quad-2-along-x
                                         normalized-quad-3-along-x-y normalized-quad-4-along-y]
-        ;_ (print-array normalized-quad-1)
         x-to-plus (solve-line x-to-plus height)
         x-to-minus (solve-line x-to-minus height)
         y-to-plus (solve-line y-to-plus width)
@@ -178,14 +156,9 @@
         diags-intersections (-> + (merge-with x-to-plus x-to-minus y-to-plus y-to-minus)
                                 (update :even inc))
         possible-cells (->> normalized-quadrants-triangles (map #(vector :even %))
-                            ;first
-                            ;(apply compute-intersection)
                             (map #(apply compute-intersection %))
                             (apply merge-with +)
-                            (merge-with + diags-intersections)
-                            ;(apply + x-diag-intersection y-diag-intersection)
-                            ;dec
-                            )]
+                            (merge-with + diags-intersections))]
     (if (even? moves)
       (:even possible-cells)
       (:odd possible-cells))))
@@ -197,24 +170,3 @@
          (map solve)
          (str/join "\n")
          (spit "output.txt"))))
-
-(defn test-all []
-  (let [data1 [12 10 5 6 [[6 7] [11 7] [6 12]]]
-        data2 [10 12 6 5 [[7 6] [12 6] [7 11]]]
-        data3 [16 14 5 6 [[6 7] [18 7] [6 19]]]
-        data4 [14 12 5 6 [[6 7] [15 7] [6 16]]]]
-    ;(test-arr data2)
-    ;(test-arr data1)
-    ;(test-arr data3)
-    ;(test-arr data4)
-    ;(test-arr [10 8 0 0 [[5 2] [12 2] [5 9]]])
-    ;(test-arr [10 8 0 0 [[5 2] [15 2] [5 12]]])
-    (test-arr [8 8 2 2 [[4 3] [7 3] [4 6]]])
-    (test-arr [8 8 2 2 [[4 3] [8 3] [4 7]]])
-    (test-arr [8 8 2 2 [[4 3] [9 3] [4 8]]])
-    (test-arr [8 8 2 2 [[4 3] [10 3] [4 9]]])
-    (test-arr [8 8 2 2 [[4 3] [11 3] [4 10]]])
-    (test-arr [8 8 2 2 [[4 3] [12 3] [4 11]]])
-    (test-arr [8 8 2 2 [[4 3] [13 3] [4 12]]])
-    (test-arr [8 8 2 2 [[4 3] [14 3] [4 13]]])
-    (test-arr [8 8 2 2 [[4 3] [15 3] [4 14]]])))

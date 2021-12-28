@@ -1,5 +1,23 @@
 (ns fiks-s8-k3-sloni.core
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.math.numeric-tower :as nt])
+  (:refer-clojure :exclude [+ - * / inc dec quot mod even?]))
+
+(defmacro defbigdecop [f]
+  `(defn ~f [& args#]
+     (apply ~(symbol (str "clojure.core/" f))
+            (map bigdec args#))))
+
+(defbigdecop +)
+(defbigdecop -)
+(defbigdecop *)
+(defbigdecop /)
+(defbigdecop inc)
+(defbigdecop dec)
+(defbigdecop quot)
+(defbigdecop mod)
+(defn even? [n]
+  (= (mod n 2) 2))
 
 (def evenness-complement {:even :odd
                           :odd  :even})
@@ -24,7 +42,7 @@
   evenness into consideration."
   [corner-evenness overhang]
   (let [corner-evenness-compl (evenness-complement corner-evenness)
-        corner-evenness-fields (long (Math/pow (quot (inc overhang) 2) 2))
+        corner-evenness-fields (nt/expt (quot (inc overhang) 2) 2)
         overhang-half (quot overhang 2)
         ;; divided by 2, but multiplied by 2 right after
         not-corner-evenness-fields (* overhang-half (inc overhang-half))]
@@ -35,10 +53,8 @@
           "Takes data of a rectangle and a normalized triangle so that the triangle should
            be in the first quadrant from the center and all the coordinates positive:
            y [x3 y3]
-
            y [x1 y1]    [x2 y2]
                 x          x
-
            x2 > rest
            y3 > rest"
           (fn [corner-evenness [height width center-x center-y [[x1 y1] [max-x y2] [x3 max-y]] :as in]]
@@ -91,8 +107,8 @@
       (let [total-half (/ (* (- height x1)
                              (- width y1))
                           2)]
-        {corner-evenness          (long (Math/ceil total-half))
-         opposite-corner-evenness (long (Math/floor total-half))})
+        {corner-evenness          (nt/ceil (bigdec total-half))
+         opposite-corner-evenness (nt/floor (bigdec total-half))})
       (let [outside-x-evenness (even-or-odd-field [x1 y1] [height y1] corner-evenness)
             outside-y-evenness (even-or-odd-field [x1 y1] [x1 width] corner-evenness)
             minusX (odd-and-even outside-x-evenness outside-x-overhang)
@@ -137,11 +153,12 @@
         start* (if (neg? start*) 0 start*)
         end* (if (> end* (dec height-or-width)) (dec height-or-width) end*)
         len-half (/ (inc (- end* start*)) 2)]
-    {:odd  (long (Math/ceil len-half))
-     :even (long (Math/floor len-half))}))
+    {:odd  (Math/ceil len-half)
+     :even (Math/floor len-half)}))
 
 (defn solve [[height width x y moves]]
-  (let [[[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
+  (let [[height width x y moves] (map bigdec [height width x y moves])
+        [[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
          [x-to-plus x-to-minus y-to-plus y-to-minus]] (rhombus-quarters-and-diagonals x y moves)
         normalized-quad-1 [height width x y quad-1-triangle]
         normalized-quad-2-along-x (rotate+270 [height width x y quad-2-triangle])
@@ -167,6 +184,8 @@
   (let [processed-input (read-and-process-input)]
     (->> processed-input
          ;first solve
-         (map solve)
-         (str/join "\n")
-         (spit "output.txt"))))
+         last solve vector
+         ;(map solve)
+         ;(str/join "\n")
+         ;(spit "output.txt")
+         )))

@@ -70,6 +70,9 @@
   (/ (* overhang (inc overhang))
      2))
 
+(defn merge-with-minus [& maps]
+  (apply merge-with - maps))
+
 (defmethod compute-intersection [false false]               ; the entire triangle is inside the rectangle
   [corner-evenness [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   ;    x · · · ·    obviously the flat of the triangle here is (apply + (range 1 (+ 1 5)))
@@ -78,21 +81,25 @@
   ;    · · · · ·    in Clojure: (/ (* n (inc n))
   ;    x · · · x                 2)
   (let [overhang (inc (- x2 x1))]
-    (dotted-triangle-flat overhang)))
+    (odd-and-even corner-evenness overhang)))
 
 (defmethod compute-intersection [false true]                ; X-greatest vertex INside, Y-greatest OUTside
   [corner-evenness [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   (let [inside-overhang (inc (- x2 x1))
-        outside-overhang (- y3 (dec width))]
-    (- (dotted-triangle-flat inside-overhang)
-       (dotted-triangle-flat outside-overhang))))
+        outside-overhang (- y3 (dec width))
+        outside-y-evenness (even-or-odd-field [x1 y1] [x1 width] corner-evenness)
+        minusY (odd-and-even outside-y-evenness outside-overhang)]
+    (merge-with-minus (odd-and-even corner-evenness inside-overhang)
+                      minusY)))
 
 (defmethod compute-intersection [true false]                ; X-greatest vertex OUTside, Y-greatest OUTside
   [corner-evenness [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   (let [inside-overhang (inc (- x2 x1))
-        outside-overhang (- x2 (dec height))]
-    (- (dotted-triangle-flat inside-overhang)
-       (dotted-triangle-flat outside-overhang))))
+        outside-overhang (- x2 (dec height))
+        outside-x-evenness (even-or-odd-field [x1 y1] [height y1] corner-evenness)
+        minusX (odd-and-even outside-x-evenness outside-overhang)]
+    (merge-with-minus (odd-and-even corner-evenness inside-overhang)
+                      minusX)))
 
 (defmethod compute-intersection [true true]                 ; X-greatest vertex OUTside, Y-greatest OUTside
   [corner-evenness [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]] :as arr]]
@@ -100,14 +107,6 @@
         outside-x-overhang (- x2 (dec height))
         outside-y-overhang (- y3 (dec width))
         opposite-corner-evenness (evenness-complement corner-evenness)]
-    (print-array arr)
-    (println corner-evenness
-             inside-overhang
-             outside-x-overhang
-             outside-y-overhang)
-    #_(println (odd-and-even corner-evenness inside-overhang)
-               (odd-and-even corner-evenness outside-x-overhang)
-               (odd-and-even corner-evenness outside-y-overhang))
     (if (> (+ outside-x-overhang outside-y-overhang)
            inside-overhang)
       (let [total-half (/ (* (- height x1)
@@ -119,24 +118,25 @@
             outside-y-evenness (even-or-odd-field [x1 y1] [x1 width] corner-evenness)
             minusX (odd-and-even outside-x-evenness outside-x-overhang)
             minusY (odd-and-even outside-y-evenness outside-y-overhang)]
-        (merge-with -
-                    (odd-and-even corner-evenness inside-overhang)
-                    minusX
-                    minusY)))))
+        (merge-with-minus (odd-and-even corner-evenness inside-overhang)
+                          minusX
+                          minusY)))))
 
 (defn rhombus-quarters-and-diagonals [x y moves]
-  (let [x-left (- x moves)
-        x-right (+ x moves)
-        y-bottom (- y moves)
-        y-top (+ y moves)
-        horizontal-line [x-left x-right]
-        vertical-line [y-bottom y-top]
-        quad-1-triangle [[(inc x) (inc y)] [(dec x-right) (inc y)] [(inc x) (dec y-top)]]
-        quad-2-triangle [[(dec x) (inc y)] [(dec x) (dec y-top)] [(inc x-left) (inc y)]]
-        quad-3-triangle [[(dec x) (dec y)] [(inc x-left) (dec y)] [(dec x) (inc y-bottom)]]
-        quad-4-triangle [[(inc x) (dec y)] [(inc x) (inc y-bottom)] [(dec x-right) (dec y)]]]
+  (let [x-min (- x moves)
+        x-max (+ x moves)
+        y-min (- y moves)
+        y-max (+ y moves)
+        x-to-plus {:x-1 (inc x) :x-2 x-max :start :x-1}
+        x-to-minus {:x-1 x-min :x-2 (dec x) :start :x-2}
+        y-to-plus {:y-1 (inc y) :y-2 y-max :start :y-1}
+        y-to-minus {:y-1 y-min :y-2 (dec y) :start :y-2}
+        quad-1-triangle [[(inc x) (inc y)] [(dec x-max) (inc y)] [(inc x) (dec y-max)]]
+        quad-2-triangle [[(dec x) (inc y)] [(dec x) (dec y-max)] [(inc x-min) (inc y)]]
+        quad-3-triangle [[(dec x) (dec y)] [(inc x-min) (dec y)] [(dec x) (inc y-min)]]
+        quad-4-triangle [[(inc x) (dec y)] [(inc x) (inc y-min)] [(dec x-max) (dec y)]]]
     [[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
-     [horizontal-line vertical-line]]))
+     [x-to-plus x-to-minus y-to-plus y-to-minus]]))
 
 (defn rotate+90 [[height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   (let [[new-center-x new-x1 new-x2 new-x3] (map #(- width % 1) [center-y y1 y2 y3])
@@ -160,19 +160,20 @@
 
 (defn solve [[height width x y moves]]
   (let [[[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
-         [x-line y-line]] (rhombus-quarters-and-diagonals x y moves)
+         [x-to-plus x-to-minus y-to-plus y-to-minus]] (rhombus-quarters-and-diagonals x y moves)
         normalized-quad-1 [height width x y quad-1-triangle]
         normalized-quad-2-along-x (rotate+270 [height width x y quad-2-triangle])
         normalized-quad-3-along-x-y (rotate+180 [height width x y quad-3-triangle])
         normalized-quad-4-along-y (rotate+90 [height width x y quad-4-triangle])
         normalized-quadrants-triangles [normalized-quad-1 normalized-quad-2-along-x
                                         normalized-quad-3-along-x-y normalized-quad-4-along-y]
-        x-diag-intersection (solve-line x-line height)
-        y-diag-intersection (solve-line y-line width)
+        ;x-diag-intersection (solve-line x-line height)
+        ;y-diag-intersection (solve-line y-line width)
         possible-cells (->> normalized-quadrants-triangles (map #(vector :even %))
-                            first
-                            (apply compute-intersection)
-                            ;(map #(apply compute-intersection %))
+                            ;first
+                            ;(apply compute-intersection)
+                            (map #(apply compute-intersection %))
+                            (apply merge-with +)
                             ;(apply + x-diag-intersection y-diag-intersection)
                             ;dec
                             )]

@@ -12,7 +12,7 @@
     (evenness-complement evenness)))
 
 (defn read-and-process-input []
-  (->> "sample.txt" slurp
+  (->> "input.txt" slurp
        str/split-lines
        rest
        (map #(as-> % input-line
@@ -37,7 +37,7 @@
   evenness into consideration."
   [corner-evenness overhang]
   (let [corner-evenness-compl (evenness-complement corner-evenness)
-        corner-evenness-fields (int (Math/pow (quot (inc overhang) 2) 2))
+        corner-evenness-fields (long (Math/pow (quot (inc overhang) 2) 2))
         overhang-half (quot overhang 2)
         ;; divided by 2, but multiplied by 2 right after
         not-corner-evenness-fields (* overhang-half (inc overhang-half))]
@@ -153,10 +153,13 @@
         [new-center-y new-y1 new-y2 new-y3] (map #(- height % 1) [center-x x1 x2 x3])]
     [width height new-center-x new-center-y [[new-x1 new-y1] [new-x2 new-y2] [new-x3 new-y3]]]))
 
-(defn solve-line [[start end] range]
-  (let [start (if (neg? start) 0 start)
-        end (if (> end (dec range)) (dec range) end)]
-    (inc (- end start))))
+(defn solve-line [{:keys [x-1 x-2 y-1 y-2 start]} height-or-width]
+  (let [[start* end*] (if x-1 [x-1 x-2] [y-1 y-2])
+        start* (if (neg? start*) 0 start*)
+        end* (if (> end* (dec height-or-width)) (dec height-or-width) end*)
+        len-half (/ (inc (- end* start*)) 2)]
+    {:odd  (long (Math/ceil len-half))
+     :even (long (Math/floor len-half))}))
 
 (defn solve [[height width x y moves]]
   (let [[[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
@@ -167,26 +170,33 @@
         normalized-quad-4-along-y (rotate+90 [height width x y quad-4-triangle])
         normalized-quadrants-triangles [normalized-quad-1 normalized-quad-2-along-x
                                         normalized-quad-3-along-x-y normalized-quad-4-along-y]
-        ;x-diag-intersection (solve-line x-line height)
-        ;y-diag-intersection (solve-line y-line width)
+        ;_ (print-array normalized-quad-1)
+        x-to-plus (solve-line x-to-plus height)
+        x-to-minus (solve-line x-to-minus height)
+        y-to-plus (solve-line y-to-plus width)
+        y-to-minus (solve-line y-to-minus width)
+        diags-intersections (-> + (merge-with x-to-plus x-to-minus y-to-plus y-to-minus)
+                                (update :even inc))
         possible-cells (->> normalized-quadrants-triangles (map #(vector :even %))
                             ;first
                             ;(apply compute-intersection)
                             (map #(apply compute-intersection %))
                             (apply merge-with +)
+                            (merge-with + diags-intersections)
                             ;(apply + x-diag-intersection y-diag-intersection)
                             ;dec
                             )]
-    possible-cells))
+    (if (even? moves)
+      (:even possible-cells)
+      (:odd possible-cells))))
 
 (defn -main [& args]
   (let [processed-input (read-and-process-input)]
     (->> processed-input
-         first solve
-         ; (map solve)
-         ;(str/join "\n")
-         ;(spit "output.txt")
-         )))
+         ;first solve
+         (map solve)
+         (str/join "\n")
+         (spit "output.txt"))))
 
 (defn test-all []
   (let [data1 [12 10 5 6 [[6 7] [11 7] [6 12]]]

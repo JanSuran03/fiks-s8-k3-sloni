@@ -2,23 +2,11 @@
   (:require [clojure.string :as str])
   (:refer-clojure :exclude [even? + - * / inc dec quot mod >]))
 
-(def ops (atom []))
-
 (defmacro defbigdecop [f]
-  (let [op (str f)]
-    `(defn ~f [& args#]
-       ;(println "OP: Clojure" ~op)
-       ;(doseq [arg# args#] (println arg#))
-       (let [ret# (apply ~(symbol (str "clojure.core/" f))
-                         (map bigdec args#))]
-         ;(println "Clojure" ~op ret#)
-         ;(newline)
-         ;(swap! ops conj (list* ret# (str "clojure.core/" ~op) args#))
-         (cond-> ret# (number? ret#) bigdec)))))
-
-(defn pt [arg]
-  (println arg)
-  arg)
+  `(defn ~f [& args#]
+     (let [ret# (apply ~(symbol (str "clojure.core/" f))
+                       (map bigdec args#))]
+       (cond-> ret# (number? ret#) bigdec))))
 
 (defbigdecop +)
 (defbigdecop -)
@@ -29,45 +17,20 @@
 (defbigdecop quot)
 (defbigdecop mod)
 (defbigdecop >)
+
 (defn even? [n]
   (== (mod (bigdec n) 2M) 0))
 
-(defmacro defmathop [f]
-  (let [op (str f)]
-    `(defn ~f [arg#]
-       (println "OP: Math" ~op)
-       (println arg#)
-       (let [ret# (~(symbol (str "nt/" f))
-                    (bigdec arg#))]
-         (println (str "nt/" ~op) "ret" ret#)
-         (newline)
-         ret#))))
-(do
-  (defn floor [n]
-    ;(println "OP: Math floor")
-    ;(println n)
-    (let [n (bigdec n)
-          ret (quot n 1M)]
-      ;(println "Floor ret" ret)
-      ;(newline)
-      ;(swap! ops conj (list ret "floor" n))
-      ret))
+(defn floor [n]
+  (let [n (bigdec n)]
+    (quot n 1M)))
 
-  (defn ceil [n]
-    ;(println "OP: Math ceil")
-    ;(println n)
-    (let [n (bigdec n)
-          ret (quot n 1M)
-          ret (if (= n ret)
-                ret
-                (inc ret))]
-      ;(println "Ceil ret" ret)
-      ;(newline)
-      ;(swap! ops conj (list ret "ceil" n))
-      ret)))
-
-;(defmathop floor)
-;(defmathop ceil)
+(defn ceil [n]
+  (let [n (bigdec n)
+        ret (quot n 1M)]
+    (if (= n ret)
+      ret
+      (inc ret))))
 
 (def evenness-complement {:even :odd
                           :odd  :even})
@@ -93,14 +56,8 @@
   [corner-evenness overhang]
   (let [corner-evenness-compl (evenness-complement corner-evenness)
         n1 (bigdec (quot (inc overhang) 2M))
-        ;n2 2M
         corner-evenness-fields (* n1 n1)
-        ;_ (println n1)
-        #_(do (println corner-evenness-fields)
-              (println (nt/expt n1 n2))
-              (throw (RuntimeException.)))
         overhang-half (quot overhang 2M)
-        ;; divided by 2, but multiplied by 2 right after
         not-corner-evenness-fields (* overhang-half (inc overhang-half))]
     {corner-evenness       corner-evenness-fields
      corner-evenness-compl not-corner-evenness-fields}))
@@ -237,11 +194,8 @@
       (:odd possible-cells))))
 
 (defn -main [& args]
-  (reset! ops [])
   (let [processed-input (read-and-process-input)]
     (->> processed-input
-         ;first solve
-         ;(#(nth % 48)) solve vector
          (map #(as-> (solve %) ret
                      (str ret)
                      (if (= (second (str/reverse ret)) \.)
@@ -249,13 +203,4 @@
                        ret)
                      (apply str ret)))
          (str/join "\n")
-         (spit "output.txt")
-         )))
-
-(defn test-all []
-  (for [[res f & args] @ops]
-    (let [res2 (eval (list* (read-string f) (map #(->> % str
-                                                       butlast
-                                                       (apply str)
-                                                       read-string) args)))]
-      (list* res res2 f args))))
+         (spit "output.txt"))))

@@ -1,7 +1,5 @@
 (ns fiks-s8-k3-sloni.core
-  (:require [clojure.string :as str]
-            [clojure.math.numeric-tower :as nt]
-            [com.gfredericks.exact :as exact])
+  (:require [clojure.string :as str])
   (:refer-clojure :exclude [even? + - * / inc dec quot mod >]))
 
 (def ops (atom []))

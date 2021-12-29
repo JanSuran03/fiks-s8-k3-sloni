@@ -6,6 +6,4 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.clojure/math.numeric-tower "0.0.5"]
                  [com.gfredericks/exact "0.1.11"]]
-  :repl-options {:init-ns fiks-s8-k3-sloni.core}
-  ;:java-source-paths ["java/src"]
-  )
+  :repl-options {:init-ns fiks-s8-k3-sloni.core})

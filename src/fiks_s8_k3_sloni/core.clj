@@ -1,12 +1,26 @@
 (ns fiks-s8-k3-sloni.core
   (:require [clojure.string :as str]
-            [clojure.math.numeric-tower :as nt])
-  (:refer-clojure :exclude [+ - * / inc dec quot mod even?]))
+            [clojure.math.numeric-tower :as nt]
+            [com.gfredericks.exact :as exact])
+  (:refer-clojure :exclude [even? + - * / inc dec quot mod >]))
+
+(def ops (atom []))
 
 (defmacro defbigdecop [f]
-  `(defn ~f [& args#]
-     (apply ~(symbol (str "clojure.core/" f))
-            (map bigdec args#))))
+  (let [op (str f)]
+    `(defn ~f [& args#]
+       ;(println "OP: Clojure" ~op)
+       ;(doseq [arg# args#] (println arg#))
+       (let [ret# (apply ~(symbol (str "clojure.core/" f))
+                         (map bigdec args#))]
+         ;(println "Clojure" ~op ret#)
+         ;(newline)
+         ;(swap! ops conj (list* ret# (str "clojure.core/" ~op) args#))
+         (cond-> ret# (number? ret#) bigdec)))))
+
+(defn pt [arg]
+  (println arg)
+  arg)
 
 (defbigdecop +)
 (defbigdecop -)
@@ -16,8 +30,46 @@
 (defbigdecop dec)
 (defbigdecop quot)
 (defbigdecop mod)
+(defbigdecop >)
 (defn even? [n]
-  (= (mod n 2) 2))
+  (== (mod (bigdec n) 2M) 0))
+
+(defmacro defmathop [f]
+  (let [op (str f)]
+    `(defn ~f [arg#]
+       (println "OP: Math" ~op)
+       (println arg#)
+       (let [ret# (~(symbol (str "nt/" f))
+                    (bigdec arg#))]
+         (println (str "nt/" ~op) "ret" ret#)
+         (newline)
+         ret#))))
+(do
+  (defn floor [n]
+    ;(println "OP: Math floor")
+    ;(println n)
+    (let [n (bigdec n)
+          ret (quot n 1M)]
+      ;(println "Floor ret" ret)
+      ;(newline)
+      ;(swap! ops conj (list ret "floor" n))
+      ret))
+
+  (defn ceil [n]
+    ;(println "OP: Math ceil")
+    ;(println n)
+    (let [n (bigdec n)
+          ret (quot n 1M)
+          ret (if (= n ret)
+                ret
+                (inc ret))]
+      ;(println "Ceil ret" ret)
+      ;(newline)
+      ;(swap! ops conj (list ret "ceil" n))
+      ret)))
+
+;(defmathop floor)
+;(defmathop ceil)
 
 (def evenness-complement {:even :odd
                           :odd  :even})
@@ -28,7 +80,7 @@
     (evenness-complement evenness)))
 
 (defn read-and-process-input []
-  (->> "input-2.txt" slurp
+  (->> "input.txt" slurp
        str/split-lines
        rest
        (map #(as-> % input-line
@@ -42,8 +94,14 @@
   evenness into consideration."
   [corner-evenness overhang]
   (let [corner-evenness-compl (evenness-complement corner-evenness)
-        corner-evenness-fields (nt/expt (quot (inc overhang) 2) 2)
-        overhang-half (quot overhang 2)
+        n1 (bigdec (quot (inc overhang) 2M))
+        ;n2 2M
+        corner-evenness-fields (* n1 n1)
+        ;_ (println n1)
+        #_(do (println corner-evenness-fields)
+              (println (nt/expt n1 n2))
+              (throw (RuntimeException.)))
+        overhang-half (quot overhang 2M)
         ;; divided by 2, but multiplied by 2 right after
         not-corner-evenness-fields (* overhang-half (inc overhang-half))]
     {corner-evenness       corner-evenness-fields
@@ -106,9 +164,9 @@
            inside-overhang)
       (let [total-half (/ (* (- height x1)
                              (- width y1))
-                          2)]
-        {corner-evenness          (nt/ceil (bigdec total-half))
-         opposite-corner-evenness (nt/floor (bigdec total-half))})
+                          2M)]
+        {corner-evenness          (ceil total-half)
+         opposite-corner-evenness (floor total-half)})
       (let [outside-x-evenness (even-or-odd-field [x1 y1] [height y1] corner-evenness)
             outside-y-evenness (even-or-odd-field [x1 y1] [x1 width] corner-evenness)
             minusX (odd-and-even outside-x-evenness outside-x-overhang)
@@ -122,10 +180,10 @@
         x-max (+ x moves)
         y-min (- y moves)
         y-max (+ y moves)
-        x-to-plus {:x-1 (inc x) :x-2 x-max :start :x-1}
-        x-to-minus {:x-1 x-min :x-2 (dec x) :start :x-2}
-        y-to-plus {:y-1 (inc y) :y-2 y-max :start :y-1}
-        y-to-minus {:y-1 y-min :y-2 (dec y) :start :y-2}
+        x-to-plus {:x-1 (inc x) :x-2 x-max}
+        x-to-minus {:x-1 x-min :x-2 (dec x)}
+        y-to-plus {:y-1 (inc y) :y-2 y-max}
+        y-to-minus {:y-1 y-min :y-2 (dec y)}
         quad-1-triangle [[(inc x) (inc y)] [(dec x-max) (inc y)] [(inc x) (dec y-max)]]
         quad-2-triangle [[(dec x) (inc y)] [(dec x) (dec y-max)] [(inc x-min) (inc y)]]
         quad-3-triangle [[(dec x) (dec y)] [(inc x-min) (dec y)] [(dec x) (inc y-min)]]
@@ -148,16 +206,16 @@
         [new-center-y new-y1 new-y2 new-y3] (map #(- height % 1) [center-x x1 x2 x3])]
     [width height new-center-x new-center-y [[new-x1 new-y1] [new-x2 new-y2] [new-x3 new-y3]]]))
 
-(defn solve-line [{:keys [x-1 x-2 y-1 y-2 start]} height-or-width]
+(defn solve-line [{:keys [x-1 x-2 y-1 y-2]} height-or-width]
   (let [[start* end*] (if x-1 [x-1 x-2] [y-1 y-2])
         start* (if (neg? start*) 0 start*)
         end* (if (> end* (dec height-or-width)) (dec height-or-width) end*)
-        len-half (/ (inc (- end* start*)) 2)]
-    {:odd  (Math/ceil len-half)
-     :even (Math/floor len-half)}))
+        len-half (/ (inc (- end* start*)) 2M)]
+    {:odd  (ceil len-half)
+     :even (floor len-half)}))
 
 (defn solve [[height width x y moves]]
-  (let [[height width x y moves] (map bigdec [height width x y moves])
+  (let [;[height width x y moves] (map bigdec [height width x y moves])
         [[quad-1-triangle quad-2-triangle quad-3-triangle quad-4-triangle]
          [x-to-plus x-to-minus y-to-plus y-to-minus]] (rhombus-quarters-and-diagonals x y moves)
         normalized-quad-1 [height width x y quad-1-triangle]
@@ -181,11 +239,25 @@
       (:odd possible-cells))))
 
 (defn -main [& args]
+  (reset! ops [])
   (let [processed-input (read-and-process-input)]
     (->> processed-input
          ;first solve
-         last solve vector
-         ;(map solve)
-         ;(str/join "\n")
-         ;(spit "output.txt")
+         ;(#(nth % 48)) solve vector
+         (map #(as-> (solve %) ret
+                     (str ret)
+                     (if (= (second (str/reverse ret)) \.)
+                       (butlast (butlast ret))
+                       ret)
+                     (apply str ret)))
+         (str/join "\n")
+         (spit "output.txt")
          )))
+
+(defn test-all []
+  (for [[res f & args] @ops]
+    (let [res2 (eval (list* (read-string f) (map #(->> % str
+                                                       butlast
+                                                       (apply str)
+                                                       read-string) args)))]
+      (list* res res2 f args))))

@@ -100,7 +100,7 @@
     (merge-with-minus (odd-and-even corner-evenness inside-overhang)
                       minusY)))
 
-(defmethod compute-intersection [true false]                ; X-greatest vertex OUTside, Y-greatest OUTside
+(defmethod compute-intersection [true false]                ; X-greatest vertex OUTside, Y-greatest INside
   [corner-evenness [height width center-x center-y [[x1 y1] [x2 y2] [x3 y3]]]]
   (let [inside-overhang (inc (- x2 x1))
         outside-overhang (- x2 (dec height))
@@ -196,11 +196,10 @@
 (defn -main [& args]
   (let [processed-input (read-and-process-input)]
     (->> processed-input
-         (map #(as-> (solve %) ret
-                     (str ret)
-                     (if (= (second (str/reverse ret)) \.)
-                       (butlast (butlast ret))
-                       ret)
-                     (apply str ret)))
+         (map #(let [ret (.toString (solve %))]
+                 (if (and (>= (count ret) 3)
+                          (= (.charAt ^String ret (- (count ret) 2)) \.))
+                   (subs ret 0 (- (count ret) 2))
+                   ret)))
          (str/join "\n")
          (spit "output.txt"))))
